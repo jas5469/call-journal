@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "call-journal", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000 },
+    { "name": "pages-preview", "runtimeExecutable": "node", "runtimeArgs": ["scripts/serve-pages.js"], "port": 4000, "url": "http://localhost:4000" }
+  ]
+}

@@ -1,0 +1,100 @@
+# Collects stock data, builds the site and publishes it to GitHub Pages.
+#
+#   Full run   (daily, ~20-30 min): every stock's prices, charts, key numbers, analysts, financials, news.
+#   Prices run (every 15 min while HK/SG or US markets are open, ~3 min): refreshes prices in the
+#              data from the last full run, which is kept between runs in the Actions cache.
+#
+# You can also start either one by hand: Actions tab > "Update data and deploy" > Run workflow.
+
+name: Update data and deploy
+
+on:
+  schedule:
+    - cron: "30 22 * * 1-5"           # full run: 22:30 UTC Mon-Fri (after the US close; 6:30am SG/HK)
+    - cron: "*/15 1-8,13-21 * * 1-5"  # prices: every 15 min, 01:00-08:59 UTC (SG/HK) and 13:00-21:59 UTC (US, incl. the close)
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "full = everything (~30 min), prices = prices only (~3 min)"
+        type: choice
+        options: [prices, full]
+        default: prices
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. A new prices run waits instead of cancelling a long full run.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Data from the most recent full run (if any)
+      - id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: public/data
+          key: stock-data-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: stock-data-
+
+      - id: mode
+        name: Pick full or prices run
+        run: |
+          MODE=prices
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "30 22 * * 1-5" ]; then MODE=full; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then MODE="${{ inputs.mode }}"; fi
+          # No saved data yet (first ever run, or the cache expired): do a full run
+          if [ -z "${{ steps.restore.outputs.cache-matched-key }}" ]; then MODE=full; fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Running in $MODE mode"
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Collect stock data
+        run: npm run fetch-data
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+
+      # Keep full-run data for the prices runs that follow
+      - if: steps.mode.outputs.mode == 'full'
+        uses: actions/cache/save@v4
+        with:
+          path: public/data
+          key: stock-data-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Build site
+        run: npm run build
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
