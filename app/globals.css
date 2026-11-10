@@ -202,3 +202,6 @@ a.button.small-btn { padding: 5px 10px; font-size: 13px; }
 .offline { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--warn-bg); color: var(--warn-text); border-radius: 999px; padding: 6px 14px; font-size: 13px; z-index: 30; }
 .side { top: 64px; }
 @media (display-mode: standalone) { .footer { padding-bottom: max(24px, env(safe-area-inset-bottom)); } }
+
+/* ---- v7: dev site ---- */
+.dev-badge { margin-left: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #111; background: #f0b429; border-radius: 4px; padding: 1px 6px; vertical-align: 2px; }

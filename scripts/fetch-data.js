@@ -22,9 +22,12 @@ import { listMarket, fetchSpark } from "../lib/universe.js";
 import { fetchNews, fetchAnalystNews } from "../lib/sources.js";
 import { getAnalystsAndStats, getStatements } from "../lib/yahoo.js";
 
-const MODE = process.env.MODE || "full";
+// Options can come from environment variables (GitHub job) or flags (easier on Windows):
+//   --prices  same as MODE=prices        --quick  same as LIMIT=100 (100 stocks per market)
+const args = process.argv.slice(2);
+const MODE = args.includes("--prices") ? "prices" : process.env.MODE || "full";
 const env = (k, d) => (process.env[k] ? Number(process.env[k]) : d);
-const LIMIT = env("LIMIT", Infinity); // per market, for test runs
+const LIMIT = args.includes("--quick") ? 100 : env("LIMIT", Infinity); // per market, for test runs
 const TOP = { US: env("TOP_US", 500), HK: env("TOP_HK", 100), SG: env("TOP_SG", 40) }; // extra-news tier
 const CONCURRENCY = env("CONCURRENCY", 6);
 const MIN_TOTAL = LIMIT === Infinity ? 5000 : 1; // below this, assume we're being blocked

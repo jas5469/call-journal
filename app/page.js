@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import MarketPulse from "@/components/MarketPulse";
 import { Star, useFavorites } from "@/lib/favorites";
-import { big, CONSENSUS, isNum, loadIndex, money, pct, startAutoRefresh, stockHref, timeAgo } from "@/lib/format";
+import { big, CONSENSUS, isNum, loadIndex, money, pct, startAutoRefresh, stockHref, STORE, timeAgo } from "@/lib/format";
 
 const TABS = [["FAV", "★ Favourites"], ["ALL", "All"], ["US", "US"], ["HK", "Hong Kong"], ["SG", "Singapore"]];
 const PAGE = 50;
@@ -48,7 +48,7 @@ const SIZES = {
 
 const RATINGS = { "": "Any rating", buyish: "Buy or strong buy", strong_buy: "Strong buy", buy: "Buy", hold: "Hold", sellish: "Underperform or sell" };
 
-const PREFS_KEY = "call-journal:screener:v1";
+const PREFS_KEY = `${STORE}screener:v1`;
 const DEFAULTS = { market: "ALL", list: "", sort: "mcap", sector: "", size: "", rating: "" };
 
 export default function Home() {

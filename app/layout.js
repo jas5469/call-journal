@@ -1,12 +1,16 @@
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import { APP_ENV } from "@/lib/format";
 import "./globals.css";
 
 // Files in public/ are served under the GitHub Pages sub-path, so app metadata links need it too
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
+const DEV = APP_ENV === "dev";
+
 export const metadata = {
-  title: "Call Journal",
+  title: DEV ? "Call Journal (dev)" : "Call Journal",
+  robots: DEV ? { index: false, follow: false } : undefined,
   description: "Research US, Hong Kong and Singapore stocks, make a call, and see if you were right.",
   applicationName: "Call Journal",
   manifest: `${BASE}/manifest.webmanifest`,
@@ -31,6 +35,7 @@ export default function RootLayout({ children }) {
         <header className="topbar">
           <Link href="/" className="brand">
             <span className="logo">◆</span> Call Journal
+            {DEV && <span className="dev-badge" title="Test site: changes here aren't live yet">DEV</span>}
           </Link>
           <nav>
             <AppShell />

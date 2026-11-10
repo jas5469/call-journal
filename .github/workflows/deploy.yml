@@ -5,6 +5,11 @@
 #              data from the last full run, which is kept between runs in the Actions cache.
 #
 # You can also start either one by hand: Actions tab > "Update data and deploy" > Run workflow.
+#
+# Every run publishes two versions of the app to the same Pages site:
+#   live  <- the main branch  ->  https://<user>.github.io/call-journal/
+#   dev   <- the dev branch   ->  https://<user>.github.io/call-journal/dev/   (test changes here first)
+# The dev version reads the live version's data, so it costs nothing extra to run.
 
 name: Update data and deploy
 
@@ -13,7 +18,7 @@ on:
     - cron: "30 22 * * 1-5"           # full run: 22:30 UTC Mon-Fri (after the US close; 6:30am SG/HK)
     - cron: "*/15 1-8,13-21 * * 1-5"  # prices: every 15 min, 01:00-08:59 UTC (SG/HK) and 13:00-21:59 UTC (US, incl. the close)
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
     inputs:
       mode:
@@ -37,7 +42,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
+      # The live site and the data job always come from main, whichever branch started the run
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-node@v4
         with:
@@ -80,10 +88,36 @@ jobs:
           path: public/data
           key: stock-data-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: Build site
+      - name: Build live site (main)
         run: npm run build
         env:
           NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+
+      # ---- Dev site, from the dev branch (skipped if there is no dev branch) ----
+      - id: devbranch
+        name: Check for a dev branch
+        run: |
+          if git ls-remote --exit-code --heads origin dev > /dev/null; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "No dev branch: publishing live only"; fi
+
+      - if: steps.devbranch.outputs.exists == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: dev-src
+
+      - if: steps.devbranch.outputs.exists == 'true'
+        name: Build dev site (dev)
+        working-directory: dev-src
+        run: |
+          npm ci
+          npm run build
+          rm -rf out/data
+          mkdir -p ../out/dev
+          cp -r out/. ../out/dev/
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}/dev
+          NEXT_PUBLIC_DATA_BASE: ${{ steps.pages.outputs.base_path }}
+          NEXT_PUBLIC_APP_ENV: dev
 
       - uses: actions/upload-pages-artifact@v3
         with:

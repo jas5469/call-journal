@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Anthropic from "@anthropic-ai/sdk";
-import { big, isNum, money, pct } from "@/lib/format";
+import { big, isNum, money, pct, STORE } from "@/lib/format";
 
 // Claude's take on a stock, two ways:
 //  1. Live: with your own Anthropic API key (kept only in this browser), Claude writes an analysis
@@ -74,9 +74,9 @@ export function buildPrompt(data, myCalls) {
   return lines.join("\n");
 }
 
-const KEY_STORE = "call-journal:anthropic-key";
-const AUTO_STORE = "call-journal:claude-auto";
-const CACHE_PREFIX = "call-journal:claude-take:";
+const KEY_STORE = "call-journal:anthropic-key"; // shared by live and dev, so you add your key once
+const AUTO_STORE = `${STORE}claude-auto`;
+const CACHE_PREFIX = `${STORE}claude-take:`;
 const MODEL = "claude-opus-5-5";
 
 const SYSTEM = [
@@ -95,7 +95,7 @@ const write = (k, v) => { try { if (v == null) localStorage.removeItem(k); else 
 // Saved analyses are capped so they can never fill the browser's storage (which would stop calls
 // and favourites from saving). Keeps the newest MAX_SAVED, and only the latest one per stock.
 const MAX_SAVED = 60;
-const INDEX_KEY = "call-journal:claude-take-index";
+const INDEX_KEY = `${STORE}claude-take-index`;
 function saveTake(cacheKey, symbol, text) {
   let index = [];
   try { index = JSON.parse(read(INDEX_KEY)) || []; } catch {}

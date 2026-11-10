@@ -52,23 +52,52 @@ You can start either run by hand: in the repository's **Actions** tab, open **Up
 
 If most stocks fail to download (for example, because a source blocks the request), the job stops and the previous version of the site stays up.
 
-## Run it on your computer
+## Development
 
-```bash
-npm install
-npm run fetch-data
-npm run dev
-```
+There are two versions of the app:
 
-Then open http://localhost:3000. The full data collection takes about 15 minutes. For a quick test with fewer stocks, or to update only prices:
+| | Branch | Address |
+|---|---|---|
+| **Live** | `main` | https://kaixunwork.github.io/call-journal/ |
+| **Dev** (test site, yellow DEV badge) | `dev` | https://kaixunwork.github.io/call-journal/dev/ |
 
-```bash
-LIMIT=100 npm run fetch-data
-```
+The dev site uses the live site's stock data, so it costs nothing extra to run. It keeps its own calls, favourites and filters, so testing there can't change your real journal. Your Anthropic API key is shared, so you only add it once.
 
-```bash
-MODE=prices npm run fetch-data
-```
+**The usual flow:**
+
+1. Switch to the dev branch:
+   ```bash
+   git switch dev
+   ```
+2. Run the app on your computer and make changes. It reloads as you save:
+   ```bash
+   npm run dev
+   ```
+   Open http://localhost:3000.
+3. Push to update the dev site. It takes about 3 minutes, and you can check it on your phone too:
+   ```bash
+   git push
+   ```
+4. When you're happy, publish to the live site:
+   ```bash
+   git switch main
+   ```
+   ```bash
+   git merge dev
+   ```
+   ```bash
+   git push
+   ```
+
+**Stock data on your computer** (saved in `public/data/`, not uploaded to GitHub):
+
+| Command | What it does | Time |
+|---|---|---|
+| `npm run data:quick` | 100 stocks per market, enough for testing | about 1 minute |
+| `npm run data` | All ~9,500 stocks | about 15 minutes |
+| `npm run data:prices` | Refresh prices only, after a full run | about 1 minute |
+
+Changes to the data job (`scripts/fetch-data.js`, `lib/sources.js`, `lib/yahoo.js`, `lib/universe.js`) only take effect on GitHub from `main`, because the dev site reads live data. Test them on your computer with `npm run data:quick` before merging.
 
 ## Preview the published version locally
 

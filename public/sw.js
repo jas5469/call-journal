@@ -6,9 +6,10 @@
 //   Anything on another site (Anthropic API, news links): never touched.
 
 const VERSION = "v1";
-const STATIC = `static-${VERSION}`;
-const DYNAMIC = `dynamic-${VERSION}`;
-const scope = new URL(self.registration.scope).pathname; // e.g. "/call-journal/"
+const scope = new URL(self.registration.scope).pathname; // "/call-journal/" (live) or "/call-journal/dev/"
+// Live and dev share one web address, so cache names include the scope to keep them apart
+const STATIC = `static-${VERSION}:${scope}`;
+const DYNAMIC = `dynamic-${VERSION}:${scope}`;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(DYNAMIC).then((c) => c.addAll([scope, `${scope}calls/`, `${scope}stock/`]).catch(() => {})));
@@ -17,7 +18,11 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
-    for (const key of await caches.keys()) if (![STATIC, DYNAMIC].includes(key)) await caches.delete(key);
+    // Delete only this site's old caches (and pre-scope ones from the first version), never the other site's
+    for (const key of await caches.keys()) {
+      const mine = key.endsWith(`:${scope}`) || !key.includes(":");
+      if (mine && ![STATIC, DYNAMIC].includes(key)) await caches.delete(key);
+    }
     await self.clients.claim();
   })());
 });
@@ -26,6 +31,8 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== self.location.origin || !url.pathname.startsWith(scope)) return;
+  // The live worker's scope also covers /dev/; leave those requests to the dev site's own worker
+  if (url.pathname.startsWith(`${scope}dev/`)) return;
 
   const path = url.pathname.slice(scope.length - 1);
   if (path.startsWith("/_next/static/") || path.startsWith("/icons/")) {

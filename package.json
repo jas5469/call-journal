@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "fetch-data": "node scripts/fetch-data.js",
     "dev": "next dev",
+    "data": "node scripts/fetch-data.js",
+    "data:quick": "node scripts/fetch-data.js --quick",
+    "data:prices": "node scripts/fetch-data.js --prices",
+    "fetch-data": "node scripts/fetch-data.js",
     "build": "next build && node scripts/fix-export.js",
-    "start": "npx serve out",
     "preview": "node scripts/serve-pages.js"
   },
   "dependencies": {
