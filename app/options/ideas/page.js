@@ -45,7 +45,8 @@ export default function IdeasPage() {
       <h1>Option ideas</h1>
       <p className="muted" style={{ marginTop: 0 }}>
         The {data.scanned} largest US stocks, checked against the <Link href="/options/lesson/?n=6">six rules</Link>.
-        {" "}{data.suggestions.length} pass rules 1–4. Updated {timeAgo(data.updatedAt)}, using prices at the last close.
+        {" "}{data.suggestions.length} pass rules 1–4. Updated {timeAgo(data.updatedAt)}, using prices at the last close
+        {data.sources && <> from {sourceText(data.sources)}</>}.
       </p>
       {!allDone(progress) && (
         <p className="notice">You haven&apos;t finished the lessons yet. The ideas will make more sense once you have. <Link href="/options/">Go to the lessons</Link></p>
@@ -106,7 +107,7 @@ function Idea({ s, traded, onTrade }) {
       </div>
 
       <div className="tiles" style={{ margin: "12px 0" }}>
-        <Tile label="Premium" value={money(s.premium, 2, ccy)} sub={`${money(cost, 0, ccy)} per contract${s.priceSource === "last" ? " · last trade" : ""}`} />
+        <Tile label="Premium" value={money(s.premium, 2, ccy)} sub={`${money(cost, 0, ccy)} per contract · ${s.priceSource === "last" ? "last trade" : `mid of ${money(s.bid, 2, ccy)}–${money(s.ask, 2, ccy)}`}`} />
         <Tile label="Breakeven" value={money(s.breakeven, 2, ccy)} sub={`stock must ${verb} ${pct(Math.abs(s.breakevenMove))}`} />
         <Tile label="Delta" value={s.delta.toFixed(2)} sub={`~${Math.round(s.delta * 100)}% chance it ends in the money`} />
         <Tile label="Days left" value={s.days} sub={`expires ${s.expiry}`} />
@@ -169,7 +170,10 @@ function Idea({ s, traded, onTrade }) {
         )}
       </div>
       {err && <p className="notice small">{err}</p>}
-      <p className="small muted" style={{ margin: "8px 0 0" }}>Contract {s.contract}</p>
+      <p className="small muted" style={{ margin: "8px 0 0" }}>
+        Contract {s.contract} · prices from {s.dataSource || "Yahoo"}
+        {s.greeksFrom === "source" ? ", volatility and delta from Tradier" : ", volatility and delta calculated by the app"}
+      </p>
     </article>
   );
 }
@@ -185,3 +189,9 @@ function Tile({ label, value, sub }) {
 }
 
 const fmtDate = (d) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+function sourceText({ Tradier = 0, Yahoo = 0 }) {
+  if (!Tradier) return "Yahoo Finance";
+  if (!Yahoo) return "Tradier";
+  return `Tradier (${Tradier} stocks) and Yahoo Finance (${Yahoo})`;
+}

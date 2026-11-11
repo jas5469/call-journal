@@ -24,6 +24,7 @@ import { listMarket, fetchSpark } from "../lib/universe.js";
 import { fetchNews, fetchAnalystNews } from "../lib/sources.js";
 import { getAnalystsAndStats, getOptionChain, getStatements } from "../lib/yahoo.js";
 import { CONFIDENCE_LABEL, LIMITS, suggest } from "../lib/options.js";
+import * as tradier from "../lib/tradier.js";
 
 // Options can come from environment variables (GitHub job) or flags (easier on Windows):
 //   --prices  same as MODE=prices        --quick  same as LIMIT=100 (100 stocks per market)
@@ -170,12 +171,26 @@ async function fullRun() {
 // ---- 4. Option ideas: the lesson rules applied to the largest US stocks ----
 // Failing here never stops the run: the options page just says ideas aren't available.
 async function optionIdeas(files) {
-  console.log(`Checking options for ${files.length} US stocks… (${elapsed()})`);
+  const useTradier = tradier.hasTradier();
+  console.log(`Checking options for ${files.length} US stocks with ${useTradier ? "Tradier (Yahoo as backup)" : "Yahoo (no TRADIER_TOKEN set)"}… (${elapsed()})`);
   const suggestions = [];
   const skipped = [];
+  const sources = { Tradier: 0, Yahoo: 0 };
+  let tradierFails = 0;
   let done = 0;
   await pool(files, 4, async (file) => {
-    const chain = await part("options", file.symbol, () => getOptionChain(file.symbol, LIMITS));
+    // Tradier first. If it errors or has no chain for this stock, use Yahoo instead.
+    let chain = null;
+    if (useTradier && tradierFails < 10) {
+      try {
+        chain = await tradier.getOptionChain(file.symbol, LIMITS, file.quote.price);
+      } catch (e) {
+        // A bad token fails every stock: after 10 errors, stop asking Tradier and use Yahoo for the rest
+        if (++tradierFails <= 3 || tradierFails === 10) console.warn(`  ! ${file.symbol} Tradier: ${e.message}${tradierFails === 10 ? " (using Yahoo for the rest)" : ""}`);
+      }
+    }
+    chain ??= await part("options", file.symbol, () => getOptionChain(file.symbol, LIMITS));
+    if (chain) sources[chain.source]++;
     const result = suggest(file, chain);
     if (result.skip) skipped.push({ symbol: file.symbol, name: file.quote.name, reason: result.skip });
     else suggestions.push(result);
@@ -186,9 +201,9 @@ async function optionIdeas(files) {
   suggestions.sort((a, b) => order[a.confidence.level] - order[b.confidence.level] || b.confidence.score - a.confidence.score ||
     Math.abs(b.analysts.moveToTarget) - Math.abs(a.analysts.moveToTarget));
   skipped.sort((a, b) => a.symbol.localeCompare(b.symbol));
-  await writeFile(new URL("options.json", OUT), JSON.stringify({ updatedAt, scanned: files.length, limits: LIMITS, suggestions, skipped }));
+  await writeFile(new URL("options.json", OUT), JSON.stringify({ updatedAt, scanned: files.length, sources, limits: LIMITS, suggestions, skipped }));
   const counts = Object.keys(order).map((l) => `${suggestions.filter((x) => x.confidence.level === l).length} ${CONFIDENCE_LABEL[l].toLowerCase()}`);
-  console.log(`Option ideas: ${suggestions.length} (${counts.join(", ")}), ${skipped.length} skipped. (${elapsed()})`);
+  console.log(`Option ideas: ${suggestions.length} (${counts.join(", ")}), ${skipped.length} skipped. Chains: ${sources.Tradier} Tradier, ${sources.Yahoo} Yahoo. (${elapsed()})`);
 }
 
 async function pricesOnly() {
