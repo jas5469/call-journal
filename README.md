@@ -33,6 +33,18 @@ It's a practice journal for building trading judgement before real money is invo
   - It opens full-screen with its own icon, and shows the last data you viewed when you're offline.
 - **Your calls** are saved in your browser, with a scorecard of your hit rate.
 
+## Learn options
+
+The **Options** tab is a short course for stock investors who haven't traded options yet:
+
+1. **Lesson plan**: 7 lessons, about 40 minutes, done in order. Each ends with a quick check, and the next lesson opens once you answer it correctly.
+2. **Option ideas**: once a day, the 150 largest US stocks are checked against the six rules from lesson 6. Each idea shows which rules it passes, the analysts' view (rating, price target, recent rating changes) and a **confidence level** (high, medium or low) with its reasons. Ideas only *buy* calls or puts.
+3. **Paper trades**: record an idea as if you'd bought it. Open trades are estimated from the stock's latest price; at expiry each one settles at what the option is worth at the expiry-day close. The page groups results by confidence level, to check whether high-confidence ideas really do better.
+
+No real money is involved anywhere. Progress and paper trades are saved in your browser, like your calls. The hub page shows how long you took from the first lesson to the last, and to your first paper trade.
+
+Option prices come from Yahoo Finance's options chains. The daily run happens after the US close, when Yahoo shows no bid, ask or implied volatility, so ideas use each contract's last traded price and the session's volume, and the app works out implied volatility and delta itself (Black-Scholes, in `lib/options.js`). The lesson text is in `lib/lessons.js`. If you change a rule in `lib/options.js`, update lesson 6 to match.
+
 ## Where the data comes from
 
 Free public sources, no sign-ups or API keys: Yahoo Finance (screener, prices, analyst data, financials) and RSS news feeds from Yahoo Finance, Google News, Seeking Alpha and Nasdaq.
@@ -93,11 +105,11 @@ The dev site uses the live site's stock data, so it costs nothing extra to run. 
 
 | Command | What it does | Time |
 |---|---|---|
-| `npm run data:quick` | 100 stocks per market, enough for testing | about 1 minute |
+| `npm run data:quick` | 100 stocks per market, enough for testing (includes option ideas) | about 2 minutes |
 | `npm run data` | All ~9,500 stocks | about 15 minutes |
 | `npm run data:prices` | Refresh prices only, after a full run | about 1 minute |
 
-Changes to the data job (`scripts/fetch-data.js`, `lib/sources.js`, `lib/yahoo.js`, `lib/universe.js`) only take effect on GitHub from `main`, because the dev site reads live data. Test them on your computer with `npm run data:quick` before merging.
+Changes to the data job (`scripts/fetch-data.js`, `lib/sources.js`, `lib/yahoo.js`, `lib/universe.js`, `lib/options.js`) only take effect on GitHub from `main`, because the dev site reads live data. Test them on your computer with `npm run data:quick` before merging.
 
 ## Preview the published version locally
 

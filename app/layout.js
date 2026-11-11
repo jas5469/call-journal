@@ -41,6 +41,7 @@ export default function RootLayout({ children }) {
             <AppShell />
             <Link href="/">Stocks</Link>
             <Link href="/calls/">My calls</Link>
+            <Link href="/options/">Options</Link>
           </nav>
         </header>
         <main className="container">{children}</main>
